@@ -1,52 +1,166 @@
 <!DOCTYPE html>
 <html lang="pt">
 <head>
-<meta charset="UTF-8" />
+<meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<meta name="description" content="NexusTranslate — IA de Voz e Tradução automática com Speech-to-Text e Text-to-Speech"/>
-<meta name="author" content="Marwyn Arsenio"/>
+<meta name="description" content="NexusTranslate — IA de Voz e Tradução com Gemini"/>
 <title>NexusTranslate — IA de Voz & Tradução</title>
-<link rel="icon" type="image/svg+xml" href="favicon.svg"/>
-<link rel="stylesheet" href="css/style.css"/>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet"/>
+<style>
+:root{
+  --bg:#050a0f;--panel:#0b1520;--border:rgba(0,255,231,.18);
+  --cyan:#00ffe7;--green:#39ff14;--orange:#ff6a00;--red:#ff2244;
+  --text:#c8e6f0;--dim:#4a7a8a;
+  --glow-c:0 0 8px #00ffe7,0 0 22px rgba(0,255,231,.45);
+  --glow-g:0 0 8px #39ff14,0 0 22px rgba(57,255,20,.35);
+  --r:5px;--mono:'Share Tech Mono',monospace;--display:'Orbitron',monospace;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{
+  background:var(--bg);color:var(--text);font-family:var(--mono);
+  min-height:100vh;display:flex;flex-direction:column;align-items:center;
+  padding:24px 16px 48px;position:relative;overflow-x:hidden;
+}
+body::before{
+  content:'';position:fixed;inset:0;pointer-events:none;z-index:9000;
+  background:repeating-linear-gradient(to bottom,transparent 0,transparent 3px,rgba(0,255,231,.012) 3px,rgba(0,255,231,.012) 4px);
+}
+body::after{
+  content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
+  background-image:linear-gradient(rgba(0,255,231,.03) 1px,transparent 1px),linear-gradient(90deg,rgba(0,255,231,.03) 1px,transparent 1px);
+  background-size:40px 40px;
+}
+.wrapper{position:relative;z-index:1;width:100%;max-width:820px;display:flex;flex-direction:column}
+/* HEADER */
+header{text-align:center;margin-bottom:28px;animation:fadeDown .6s ease both}
+.logo{font-family:var(--display);font-weight:900;font-size:clamp(1.9rem,5.5vw,3rem);color:var(--cyan);text-shadow:var(--glow-c);letter-spacing:.15em;animation:flicker 5s infinite 2s}
+.logo span{color:var(--green);text-shadow:var(--glow-g)}
+.subtitle{font-size:.68rem;color:var(--dim);letter-spacing:.25em;text-transform:uppercase;margin-top:6px}
+@keyframes flicker{0%,94%,100%{opacity:1}95%{opacity:.6}96%{opacity:1}97%{opacity:.4}98%{opacity:1}}
+@keyframes fadeDown{from{opacity:0;transform:translateY(-14px)}to{opacity:1;transform:translateY(0)}}
+/* STATUS */
+.status-bar{display:flex;align-items:center;gap:10px;background:var(--panel);border:1px solid var(--border);border-radius:var(--r);padding:8px 16px;margin-bottom:18px;font-size:.74rem;color:var(--dim);animation:fadeDown .6s .1s ease both}
+.status-dot{width:8px;height:8px;border-radius:50%;background:var(--dim);flex-shrink:0;transition:background .3s,box-shadow .3s}
+.status-dot.active{background:var(--green);box-shadow:var(--glow-g);animation:pulse 1s infinite}
+.status-dot.thinking{background:var(--orange);box-shadow:0 0 8px var(--orange);animation:pulse .5s infinite}
+.status-dot.error{background:var(--red);box-shadow:0 0 8px var(--red)}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.2}}
+#status-text{flex:1}
+#api-mode{font-size:.62rem;color:var(--dim);letter-spacing:.12em}
+#api-mode.active{color:var(--green)}
+/* LANG ROW */
+.lang-row{display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap;animation:fadeDown .6s .15s ease both}
+.lang-label{font-size:.68rem;color:var(--dim);text-transform:uppercase;letter-spacing:.18em;white-space:nowrap}
+select{background:var(--panel);color:var(--cyan);border:1px solid var(--border);border-radius:var(--r);padding:7px 14px;font-family:var(--mono);font-size:.84rem;cursor:pointer;outline:none;appearance:none;flex:1;min-width:130px;transition:border-color .2s,box-shadow .2s}
+select:focus{border-color:var(--cyan);box-shadow:0 0 6px rgba(0,255,231,.3)}
+.swap-btn{background:none;border:1px solid var(--border);color:var(--orange);border-radius:var(--r);padding:7px 13px;font-size:1.05rem;cursor:pointer;transition:border-color .2s,box-shadow .2s,transform .3s;font-family:var(--mono);flex-shrink:0}
+.swap-btn:hover{border-color:var(--orange);box-shadow:0 0 10px var(--orange);transform:rotate(180deg)}
+/* PANELS */
+.panels{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;animation:fadeDown .6s .2s ease both}
+@media(max-width:560px){.panels{grid-template-columns:1fr}}
+.panel{background:var(--panel);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;transition:border-color .3s,box-shadow .3s}
+.panel.updated{animation:panelFlash .7s ease}
+@keyframes panelFlash{0%{border-color:var(--cyan);box-shadow:0 0 18px rgba(0,255,231,.3)}100%{border-color:var(--border);box-shadow:none}}
+.panel-header{display:flex;justify-content:space-between;align-items:center;padding:7px 14px;border-bottom:1px solid var(--border);font-size:.66rem;color:var(--dim);text-transform:uppercase;letter-spacing:.2em}
+.tag{background:rgba(0,255,231,.08);color:var(--cyan);border:1px solid rgba(0,255,231,.2);border-radius:3px;padding:2px 8px;font-size:.6rem;letter-spacing:.1em}
+textarea{width:100%;height:148px;background:transparent;border:none;color:var(--text);font-family:var(--mono);font-size:.88rem;padding:12px 14px;resize:none;outline:none;line-height:1.65}
+textarea::placeholder{color:var(--dim)}
+textarea[readonly]{color:var(--cyan);cursor:default}
+/* BUTTONS */
+.actions{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:10px;animation:fadeDown .6s .25s ease both}
+.btn{flex:1;min-width:130px;padding:12px 18px;border-radius:var(--r);border:1px solid;font-family:var(--display);font-size:.68rem;font-weight:700;letter-spacing:.13em;text-transform:uppercase;cursor:pointer;background:transparent;transition:background .2s,box-shadow .2s,opacity .2s,transform .1s;display:flex;align-items:center;justify-content:center;gap:7px;user-select:none}
+.btn:active:not(:disabled){transform:scale(.97)}
+.btn-mic{color:var(--green);border-color:var(--green)}
+.btn-mic:hover,.btn-mic.recording{background:rgba(57,255,20,.1);box-shadow:var(--glow-g)}
+.btn-mic.recording{animation:recPulse 1s infinite}
+@keyframes recPulse{0%,100%{box-shadow:var(--glow-g)}50%{box-shadow:0 0 3px var(--green)}}
+.btn-translate{color:var(--cyan);border-color:var(--cyan)}
+.btn-translate:hover{background:rgba(0,255,231,.1);box-shadow:var(--glow-c)}
+.btn-speak{color:var(--orange);border-color:var(--orange)}
+.btn-speak:hover{background:rgba(255,106,0,.1);box-shadow:0 0 10px var(--orange),0 0 24px rgba(255,106,0,.4)}
+.btn-clear{color:var(--dim);border-color:rgba(255,255,255,.12);flex:0;min-width:52px;padding:12px}
+.btn-clear:hover{color:var(--red);border-color:var(--red)}
+.btn:disabled{opacity:.28;cursor:not-allowed;pointer-events:none}
+/* CHAR INFO */
+.char-info{font-size:.64rem;color:var(--dim);text-align:right;margin-bottom:18px;padding-right:2px;animation:fadeDown .6s .28s ease both}
+.char-info kbd{background:rgba(255,255,255,.07);border:1px solid var(--border);border-radius:3px;padding:1px 5px;font-family:var(--mono);font-size:.6rem;color:var(--text)}
+/* LOG */
+.log-section{animation:fadeDown .6s .32s ease both}
+.log-header{font-size:.63rem;color:var(--dim);text-transform:uppercase;letter-spacing:.22em;margin-bottom:8px;display:flex;align-items:center;gap:10px}
+.log-header::after{content:'';flex:1;height:1px;background:var(--border)}
+#log{background:var(--panel);border:1px solid var(--border);border-radius:var(--r);padding:10px 14px;font-size:.73rem;color:var(--dim);height:118px;overflow-y:auto;line-height:1.75}
+#log::-webkit-scrollbar{width:4px}
+#log::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+.log-entry{display:flex;gap:8px}
+.log-time{color:#1f4555;white-space:nowrap}
+.log-ok{color:var(--green)}.log-err{color:var(--red)}.log-info{color:var(--cyan)}.log-warn{color:var(--orange)}
+.thinking-dots::after{content:'';animation:dots 1.2s steps(4,end) infinite}
+@keyframes dots{0%{content:''}25%{content:'.'}50%{content:'..'}75%{content:'...'}}
+/* FOOTER */
+footer{margin-top:28px;font-size:.62rem;color:var(--dim);display:flex;gap:10px;justify-content:center;flex-wrap:wrap;animation:fadeDown .6s .38s ease both}
+footer a{color:var(--dim);text-decoration:none}
+footer a:hover{color:var(--cyan)}
+/* MODAL */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.9);z-index:8000;display:flex;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(4px)}
+.modal-overlay.hidden{display:none}
+.modal{background:var(--panel);border:1px solid var(--cyan);border-radius:8px;padding:30px;width:100%;max-width:500px;box-shadow:var(--glow-c);animation:modalIn .3s ease}
+@keyframes modalIn{from{opacity:0;transform:scale(.94) translateY(10px)}to{opacity:1;transform:scale(1) translateY(0)}}
+.modal-logo{font-family:var(--display);font-size:1.4rem;color:var(--cyan);text-shadow:var(--glow-c);letter-spacing:.15em;margin-bottom:4px;text-align:center}
+.modal-logo span{color:var(--green);text-shadow:var(--glow-g)}
+.modal-sub{font-size:.65rem;color:var(--dim);text-align:center;letter-spacing:.2em;text-transform:uppercase;margin-bottom:22px}
+.modal h2{font-family:var(--display);font-size:.9rem;color:var(--cyan);margin-bottom:10px;letter-spacing:.1em}
+.modal p{font-size:.77rem;color:var(--dim);line-height:1.7;margin-bottom:20px}
+.modal p a{color:var(--cyan)}
+.modal p code{color:var(--orange);font-size:.74rem}
+.modal input[type=password]{width:100%;background:var(--bg);border:1px solid var(--border);color:var(--cyan);font-family:var(--mono);font-size:.85rem;padding:10px 14px;border-radius:var(--r);outline:none;margin-bottom:14px;transition:border-color .2s}
+.modal input:focus{border-color:var(--cyan)}
+.btn-confirm{width:100%;padding:12px;background:rgba(0,255,231,.08);border:1px solid var(--cyan);color:var(--cyan);font-family:var(--display);font-size:.72rem;letter-spacing:.15em;border-radius:var(--r);cursor:pointer;transition:box-shadow .2s,background .2s}
+.btn-confirm:hover{box-shadow:var(--glow-c);background:rgba(0,255,231,.14)}
+.skip-link{display:block;text-align:center;margin-top:14px;font-size:.68rem;color:var(--dim);cursor:pointer;text-decoration:underline;transition:color .2s}
+.skip-link:hover{color:var(--text)}
+.divider{border:none;border-top:1px solid var(--border);margin:20px 0}
+</style>
 </head>
 <body>
 
-<!-- API KEY MODAL -->
+<!-- MODAL -->
 <div class="modal-overlay" id="modal-overlay">
   <div class="modal">
-    <h2>🔑 API Key — Claude (Anthropic)</h2>
+    <div class="modal-logo">NEXUS<span>TRANSLATE</span></div>
+    <div class="modal-sub">Sistema de IA · Voz &amp; Tradução · v2.0</div>
+    <hr class="divider"/>
+    <h2>🔑 Google Gemini API Key</h2>
     <p>
-      Esta IA usa a API da Anthropic para tradução inteligente.<br>
-      Obtém a tua chave gratuita em
-      <a href="https://console.anthropic.com" target="_blank" rel="noopener">console.anthropic.com</a>.<br><br>
+      Esta IA usa a API do Google Gemini para tradução inteligente.<br>
+      Obtém a tua chave <strong>gratuita</strong> em
+      <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">aistudio.google.com/apikey</a>.<br><br>
       A chave é guardada apenas localmente no teu browser (<code>localStorage</code>).
-      Nunca é enviada para nenhum servidor externo além da Anthropic.
+      Nunca é enviada para nenhum servidor externo além do Google.
     </p>
-    <input type="password" id="api-key-input" placeholder="sk-ant-api03-..." autocomplete="off"/>
-    <button class="btn-confirm" id="btn-confirm-key">CONFIRMAR E INICIAR</button>
-    <span class="skip-link" id="btn-skip">Continuar sem API Key (modo gratuito)</span>
+    <input type="password" id="api-key-input" placeholder="AIza..."/>
+    <button class="btn-confirm" id="btn-confirm-key">✔ CONFIRMAR E INICIAR</button>
+    <span class="skip-link" id="btn-skip">Continuar sem API Key (modo gratuito — MyMemory)</span>
   </div>
 </div>
 
 <div class="wrapper">
-
-  <!-- HEADER -->
   <header>
     <div class="logo">NEXUS<span>TRANSLATE</span></div>
-    <div class="subtitle">Sistema de IA · Voz &amp; Tradução · v1.0</div>
+    <div class="subtitle">Sistema de IA · Voz &amp; Tradução · v2.0</div>
   </header>
 
-  <!-- STATUS BAR -->
   <div class="status-bar">
     <div class="status-dot" id="status-dot"></div>
     <span id="status-text">Aguardando input...</span>
     <span id="api-mode">FREE-TIER</span>
   </div>
 
-  <!-- LANGUAGE SELECTOR -->
   <div class="lang-row">
     <span class="lang-label">De:</span>
-    <select id="lang-from" aria-label="Idioma de origem">
+    <select id="lang-from">
       <option value="pt">🇲🇿 Português</option>
       <option value="en">🇬🇧 Inglês</option>
       <option value="es">🇪🇸 Espanhol</option>
@@ -56,9 +170,9 @@
       <option value="de">🇩🇪 Alemão</option>
       <option value="it">🇮🇹 Italiano</option>
     </select>
-    <button class="swap-btn" id="btn-swap" title="Trocar idiomas" aria-label="Trocar idiomas">⇄</button>
+    <button class="swap-btn" id="btn-swap" title="Trocar idiomas">⇄</button>
     <span class="lang-label">Para:</span>
-    <select id="lang-to" aria-label="Idioma de destino">
+    <select id="lang-to">
       <option value="en">🇬🇧 Inglês</option>
       <option value="pt">🇲🇿 Português</option>
       <option value="es">🇪🇸 Espanhol</option>
@@ -70,69 +184,313 @@
     </select>
   </div>
 
-  <!-- TEXT PANELS -->
   <div class="panels">
     <div class="panel" id="panel-input">
       <div class="panel-header">
         <span>Entrada</span>
         <span class="tag" id="tag-from">PT</span>
       </div>
-      <textarea id="input-text"
-        placeholder="Escreve aqui ou usa o microfone... (Ctrl+Enter para traduzir)"
-        aria-label="Texto de entrada"></textarea>
+      <textarea id="input-text" placeholder="Escreve aqui ou usa o microfone... (Ctrl+Enter para traduzir)"></textarea>
     </div>
     <div class="panel" id="panel-output">
       <div class="panel-header">
         <span>Tradução</span>
         <span class="tag" id="tag-to">EN</span>
       </div>
-      <textarea id="output-text" readonly
-        placeholder="Tradução aparecerá aqui..."
-        aria-label="Texto traduzido"></textarea>
+      <textarea id="output-text" readonly placeholder="Tradução aparecerá aqui..."></textarea>
     </div>
   </div>
 
-  <!-- ACTION BUTTONS -->
   <div class="actions">
-    <button class="btn btn-mic" id="btn-mic" aria-label="Ativar microfone">
+    <button class="btn btn-mic" id="btn-mic">
       <span id="mic-icon">🎙</span>
       <span id="mic-label">MICROFONE</span>
     </button>
-    <button class="btn btn-translate" id="btn-translate" aria-label="Traduzir texto">
+    <button class="btn btn-translate" id="btn-translate">
       ⚡ TRADUZIR
     </button>
-    <button class="btn btn-speak" id="btn-speak" disabled aria-label="Ouvir tradução">
+    <button class="btn btn-speak" id="btn-speak" disabled>
       🔊 FALAR
     </button>
-    <button class="btn btn-clear" id="btn-clear" title="Limpar tudo" aria-label="Limpar">✕</button>
+    <button class="btn btn-clear" id="btn-clear" title="Limpar">✕</button>
   </div>
 
-  <!-- CHAR COUNTER -->
   <div class="char-info">
-    <span id="char-count">0</span> / 2000 caracteres
-    &nbsp;·&nbsp;
-    <span id="word-count">0</span> palavras
-    &nbsp;·&nbsp;
+    <span id="char-count">0</span> / 2000 caracteres &nbsp;·&nbsp;
+    <span id="word-count">0</span> palavras &nbsp;·&nbsp;
     <kbd>Ctrl</kbd>+<kbd>Enter</kbd> para traduzir
   </div>
 
-  <!-- LOG -->
   <div class="log-section">
     <div class="log-header">System Log</div>
-    <div id="log" role="log" aria-live="polite"></div>
+    <div id="log"></div>
   </div>
 
-  <!-- FOOTER -->
   <footer>
-    <span>NexusTranslate &copy; 2026</span>
+    <span>NexusTranslate © 2026</span>
     <span>·</span>
-    <a href="https://github.com" target="_blank" rel="noopener">GitHub</a>
+    <a href="https://github.com/marwynarsenio43-boop/nexustranslate" target="_blank" rel="noopener">GitHub</a>
     <span>·</span>
     <span>ISCIM · Sistemas de Informação</span>
   </footer>
-
 </div>
 
-<script src="js/app.js"></script>
+<script>
+'use strict';
+
+// ── CONSTANTS
+const LANG_NAMES = {
+  pt:'Português',en:'English',es:'Español',fr:'Français',
+  zh:'Chinese',ar:'Arabic',de:'German',it:'Italian'
+};
+const BCP47 = {
+  pt:'pt-PT',en:'en-US',es:'es-ES',fr:'fr-FR',
+  zh:'zh-CN',ar:'ar-SA',de:'de-DE',it:'it-IT'
+};
+const MAX_CHARS = 2000;
+const GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent';
+const MYMEMORY  = 'https://api.mymemory.translated.net/get';
+
+// ── STATE
+let apiKey = localStorage.getItem('nexus_gemini_key') || '';
+let recognition = null;
+let isRecording = false;
+let isSpeaking  = false;
+let currentUtterance = null;
+
+// ── DOM
+const $ = id => document.getElementById(id);
+const els = {
+  modalOverlay:$('modal-overlay'), apiKeyInput:$('api-key-input'),
+  btnConfirm:$('btn-confirm-key'), btnSkip:$('btn-skip'),
+  statusDot:$('status-dot'), statusText:$('status-text'), apiMode:$('api-mode'),
+  langFrom:$('lang-from'), langTo:$('lang-to'),
+  tagFrom:$('tag-from'), tagTo:$('tag-to'), btnSwap:$('btn-swap'),
+  inputText:$('input-text'), outputText:$('output-text'),
+  btnMic:$('btn-mic'), micLabel:$('mic-label'),
+  btnTranslate:$('btn-translate'), btnSpeak:$('btn-speak'), btnClear:$('btn-clear'),
+  charCount:$('char-count'), wordCount:$('word-count'), log:$('log'),
+};
+
+// ── INIT
+document.addEventListener('DOMContentLoaded', () => {
+  if (apiKey) { hideModal(); markApiActive(); log('ok','Gemini API Key carregada.'); }
+  updateTags();
+  checkSTT();
+  checkTTS();
+
+  els.btnConfirm.onclick  = saveKey;
+  els.btnSkip.onclick     = skipKey;
+  els.btnSwap.onclick     = swapLangs;
+  els.btnMic.onclick      = toggleMic;
+  els.btnTranslate.onclick= doTranslate;
+  els.btnSpeak.onclick    = toggleSpeak;
+  els.btnClear.onclick    = clearAll;
+  els.langFrom.onchange   = updateTags;
+  els.langTo.onchange     = updateTags;
+  els.inputText.oninput   = updateCounters;
+
+  document.addEventListener('keydown', e => {
+    if ((e.ctrlKey||e.metaKey) && e.key==='Enter'){ e.preventDefault(); doTranslate(); }
+  });
+  log('info','NexusTranslate v2.0 iniciado — Gemini API.');
+});
+
+// ── API KEY
+function saveKey(){
+  const k = els.apiKeyInput.value.trim();
+  if(!k.startsWith('AIza')){ alert('Chave inválida. Deve começar com "AIza..."'); return; }
+  apiKey = k;
+  localStorage.setItem('nexus_gemini_key', k);
+  hideModal(); markApiActive();
+  log('ok','Gemini API Key guardada com sucesso.');
+}
+function skipKey(){ hideModal(); log('warn','Modo gratuito — MyMemory (sem IA).'); }
+function hideModal(){ els.modalOverlay.classList.add('hidden'); }
+function markApiActive(){
+  els.apiMode.textContent='GEMINI API';
+  els.apiMode.classList.add('active');
+}
+
+// ── TAGS & COUNTERS
+function updateTags(){
+  els.tagFrom.textContent = els.langFrom.value.toUpperCase();
+  els.tagTo.textContent   = els.langTo.value.toUpperCase();
+}
+function updateCounters(){
+  const t = els.inputText.value;
+  const c = t.length;
+  const w = t.trim()==='' ? 0 : t.trim().split(/\s+/).length;
+  els.charCount.textContent = c;
+  els.wordCount.textContent = w;
+  els.charCount.style.color = c > MAX_CHARS ? 'var(--red)' : '';
+  if(c > MAX_CHARS) { els.inputText.value = t.slice(0,MAX_CHARS); els.charCount.textContent = MAX_CHARS; }
+}
+
+// ── SWAP
+function swapLangs(){
+  const tl=els.langFrom.value; els.langFrom.value=els.langTo.value; els.langTo.value=tl;
+  const tt=els.inputText.value; els.inputText.value=els.outputText.value; els.outputText.value=tt;
+  updateTags(); updateCounters();
+  if(els.outputText.value) els.btnSpeak.disabled=false;
+  log('info','Idiomas trocados.');
+}
+
+// ── STT
+function checkSTT(){
+  if(!(window.SpeechRecognition||window.webkitSpeechRecognition)){
+    els.btnMic.disabled=true;
+    log('warn','STT não suportado. Use Chrome ou Edge.');
+  }
+}
+function toggleMic(){ isRecording ? stopMic() : startMic(); }
+function startMic(){
+  const SR = window.SpeechRecognition||window.webkitSpeechRecognition;
+  if(!SR) return;
+  recognition = new SR();
+  recognition.lang = BCP47[els.langFrom.value]||'pt-PT';
+  recognition.continuous=false; recognition.interimResults=true;
+  setStatus('active','🎙 A ouvir...');
+  isRecording=true; els.btnMic.classList.add('recording'); els.micLabel.textContent='PARAR';
+  log('info','STT iniciado — '+recognition.lang);
+  recognition.onresult = e => {
+    els.inputText.value = Array.from(e.results).map(r=>r[0].transcript).join('');
+    updateCounters();
+  };
+  recognition.onend = () => {
+    isRecording=false; els.btnMic.classList.remove('recording'); els.micLabel.textContent='MICROFONE';
+    setStatus('','Reconhecimento concluído.');
+    const preview = els.inputText.value.slice(0,45);
+    log('ok','STT: "'+preview+(els.inputText.value.length>45?'…':'')+'"');
+  };
+  recognition.onerror = e => {
+    isRecording=false; els.btnMic.classList.remove('recording'); els.micLabel.textContent='MICROFONE';
+    const m = e.error==='not-allowed'?'Permissão de microfone negada.':'Erro STT: '+e.error;
+    setStatus('error',m); log('err',m);
+  };
+  recognition.start();
+}
+function stopMic(){
+  if(recognition) recognition.stop();
+  isRecording=false; els.btnMic.classList.remove('recording'); els.micLabel.textContent='MICROFONE';
+}
+
+// ── TRANSLATION
+async function doTranslate(){
+  const text = els.inputText.value.trim();
+  if(!text){ log('warn','Campo de entrada vazio.'); return; }
+  const from=els.langFrom.value, to=els.langTo.value;
+  if(from===to){ log('warn','Idiomas iguais.'); return; }
+
+  setStatus('thinking','A traduzir');
+  els.btnTranslate.disabled=true;
+  els.outputText.value='';
+  els.btnSpeak.disabled=true;
+  log('info','Traduzindo '+LANG_NAMES[from]+' → '+LANG_NAMES[to]+'...');
+
+  try {
+    const result = apiKey
+      ? await translateGemini(text,from,to)
+      : await translateMyMemory(text,from,to);
+
+    els.outputText.value = result;
+    els.btnSpeak.disabled = false;
+    $('panel-output').classList.add('updated');
+    setTimeout(()=>$('panel-output').classList.remove('updated'),700);
+    setStatus('active','Tradução concluída!');
+    log('ok','Tradução OK — '+result.length+' caracteres.');
+    setTimeout(()=>setStatus('','Pronto.'),3000);
+  } catch(err){
+    setStatus('error','Erro: '+err.message);
+    log('err',err.message);
+  } finally {
+    els.btnTranslate.disabled=false;
+  }
+}
+
+async function translateGemini(text, from, to){
+  const prompt =
+    `Translate the following text from ${LANG_NAMES[from]} to ${LANG_NAMES[to]}.\n`+
+    `Return ONLY the translated text — no labels, no quotes, no explanations.\n\nText: ${text}`;
+
+  const res = await fetch(`${GEMINI_URL}?key=${apiKey}`, {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({
+      contents:[{parts:[{text: prompt}]}],
+      generationConfig:{temperature:0.2, maxOutputTokens:1024}
+    })
+  });
+
+  if(!res.ok){
+    const err = await res.json().catch(()=>({}));
+    const msg = err?.error?.message || 'HTTP '+res.status;
+    throw new Error('Gemini: '+msg);
+  }
+
+  const data = await res.json();
+  const candidate = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+  if(!candidate) throw new Error('Gemini: resposta vazia.');
+  return candidate.trim();
+}
+
+async function translateMyMemory(text, from, to){
+  const url = `${MYMEMORY}?q=${encodeURIComponent(text)}&langpair=${from}|${to}`;
+  const res = await fetch(url);
+  if(!res.ok) throw new Error('MyMemory HTTP '+res.status);
+  const data = await res.json();
+  if(data.responseStatus!==200) throw new Error(data.responseDetails||'MyMemory falhou.');
+  return data.responseData.translatedText;
+}
+
+// ── TTS
+function checkTTS(){
+  if(!window.speechSynthesis){ els.btnSpeak.disabled=true; log('warn','TTS não suportado.'); }
+}
+function toggleSpeak(){
+  if(isSpeaking){
+    window.speechSynthesis.cancel(); isSpeaking=false;
+    els.btnSpeak.innerHTML='🔊 FALAR'; setStatus('','Parado.'); return;
+  }
+  const text=els.outputText.value.trim();
+  if(!text) return;
+  const u = new SpeechSynthesisUtterance(text);
+  u.lang  = BCP47[els.langTo.value]||'en-US';
+  u.rate  = 0.95; u.pitch=1; u.volume=1;
+  u.onstart = ()=>{ isSpeaking=true; els.btnSpeak.innerHTML='⏹ PARAR'; setStatus('active','🔊 A falar...'); log('info','TTS: '+u.lang); };
+  u.onend   = ()=>{ isSpeaking=false; els.btnSpeak.innerHTML='🔊 FALAR'; setStatus('','Pronto.'); log('ok','TTS concluído.'); currentUtterance=null; };
+  u.onerror = e=>{ isSpeaking=false; els.btnSpeak.innerHTML='🔊 FALAR'; log('err','TTS erro: '+e.error); currentUtterance=null; };
+  currentUtterance=u;
+  window.speechSynthesis.speak(u);
+}
+
+// ── CLEAR
+function clearAll(){
+  if(currentUtterance) window.speechSynthesis.cancel();
+  stopMic();
+  els.inputText.value=''; els.outputText.value='';
+  els.btnSpeak.disabled=true; els.btnSpeak.innerHTML='🔊 FALAR';
+  isSpeaking=false; updateCounters(); setStatus('','Limpo.');
+  log('info','Interface limpa.');
+}
+
+// ── STATUS
+function setStatus(type, msg){
+  els.statusDot.className='status-dot'+(type?' '+type:'');
+  els.statusText.innerHTML = type==='thinking'
+    ? msg+'<span class="thinking-dots"></span>' : msg;
+}
+
+// ── LOG
+function log(type, msg){
+  const icons={ok:'✔',err:'✖',info:'›',warn:'⚠'};
+  const t = new Date().toTimeString().slice(0,8);
+  const e = document.createElement('div');
+  e.className='log-entry';
+  e.innerHTML=`<span class="log-time">[${t}]</span><span class="log-${type}">${icons[type]} ${msg.replace(/&/g,'&amp;').replace(/</g,'&lt;')}</span>`;
+  els.log.appendChild(e);
+  els.log.scrollTop=els.log.scrollHeight;
+}
+</script>
 </body>
 </html>
