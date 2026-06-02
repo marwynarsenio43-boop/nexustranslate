@@ -47,6 +47,8 @@ header{text-align:center;margin-bottom:28px;animation:fadeDown .6s ease both}
 .status-dot.active{background:var(--green);box-shadow:var(--glow-g);animation:pulse 1s infinite}
 .status-dot.thinking{background:var(--orange);box-shadow:0 0 8px var(--orange);animation:pulse .5s infinite}
 .status-dot.error{background:var(--red);box-shadow:0 0 8px var(--red)}
+#btn-change-key{background:none;border:1px solid rgba(255,106,0,.35);color:var(--orange);border-radius:3px;padding:3px 10px;font-family:var(--mono);font-size:.62rem;letter-spacing:.1em;cursor:pointer;transition:border-color .2s,box-shadow .2s,background .2s;white-space:nowrap}
+#btn-change-key:hover{border-color:var(--orange);box-shadow:0 0 8px var(--orange);background:rgba(255,106,0,.1)}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.2}}
 #status-text{flex:1}
 #api-mode{font-size:.62rem;color:var(--dim);letter-spacing:.12em}
@@ -156,6 +158,7 @@ footer a:hover{color:var(--cyan)}
     <div class="status-dot" id="status-dot"></div>
     <span id="status-text">Aguardando input...</span>
     <span id="api-mode">FREE-TIER</span>
+    <button id="btn-change-key" title="Trocar API Key">🔑 TROCAR KEY</button>
   </div>
 
   <div class="lang-row">
@@ -285,6 +288,7 @@ document.addEventListener('DOMContentLoaded', () => {
   els.btnTranslate.onclick= doTranslate;
   els.btnSpeak.onclick    = toggleSpeak;
   els.btnClear.onclick    = clearAll;
+  document.getElementById('btn-change-key').onclick = changeKey;
   els.langFrom.onchange   = updateTags;
   els.langTo.onchange     = updateTags;
   els.inputText.oninput   = updateCounters;
@@ -305,6 +309,15 @@ function saveKey(){
   log('ok','Gemini API Key guardada com sucesso.');
 }
 function skipKey(){ hideModal(); log('warn','Modo gratuito — MyMemory (sem IA).'); }
+function changeKey(){
+  localStorage.removeItem('nexus_gemini_key');
+  apiKey='';
+  els.apiMode.textContent='FREE-TIER';
+  els.apiMode.classList.remove('active');
+  els.apiKeyInput.value='';
+  els.modalOverlay.classList.remove('hidden');
+  log('info','A alterar API Key...');
+}
 function hideModal(){ els.modalOverlay.classList.add('hidden'); }
 function markApiActive(){
   els.apiMode.textContent='GEMINI API';
