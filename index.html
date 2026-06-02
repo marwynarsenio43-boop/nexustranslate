@@ -248,7 +248,6 @@ const BCP47 = {
   zh:'zh-CN',ar:'ar-SA',de:'de-DE',it:'it-IT'
 };
 const MAX_CHARS = 2000;
-const GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent';
 const MYMEMORY  = 'https://api.mymemory.translated.net/get';
 
 // ── STATE
@@ -408,30 +407,45 @@ async function doTranslate(){
   }
 }
 
+// Models tried in order when quota is exceeded
+const GEMINI_MODELS = ['gemini-1.5-flash','gemini-1.5-flash-8b','gemini-2.0-flash-lite'];
+
 async function translateGemini(text, from, to){
   const prompt =
     `Translate the following text from ${LANG_NAMES[from]} to ${LANG_NAMES[to]}.\n`+
     `Return ONLY the translated text — no labels, no quotes, no explanations.\n\nText: ${text}`;
 
-  const res = await fetch(`${GEMINI_URL}?key=${apiKey}`, {
-    method:'POST',
-    headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({
-      contents:[{parts:[{text: prompt}]}],
-      generationConfig:{temperature:0.2, maxOutputTokens:1024}
-    })
-  });
-
-  if(!res.ok){
-    const err = await res.json().catch(()=>({}));
-    const msg = err?.error?.message || 'HTTP '+res.status;
-    throw new Error('Gemini: '+msg);
+  for(const model of GEMINI_MODELS){
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+    try {
+      const res = await fetch(url, {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({
+          contents:[{parts:[{text: prompt}]}],
+          generationConfig:{temperature:0.2, maxOutputTokens:1024}
+        })
+      });
+      const data = await res.json();
+      if(!res.ok || res.status===429){
+        const msg = data?.error?.message || 'HTTP '+res.status;
+        if(msg.toLowerCase().includes('quota') || res.status===429){
+          log('warn', model+': quota esgotada, tentando próximo...');
+          continue;
+        }
+        throw new Error(msg);
+      }
+      const candidate = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+      if(!candidate){ log('warn', model+': sem resposta, tentando próximo...'); continue; }
+      log('ok','Modelo: '+model);
+      return candidate.trim();
+    } catch(e){
+      if(e.message&&(e.message.includes('quota')||e.message.includes('429'))){ continue; }
+      throw e;
+    }
   }
-
-  const data = await res.json();
-  const candidate = data?.candidates?.[0]?.content?.parts?.[0]?.text;
-  if(!candidate) throw new Error('Gemini: resposta vazia.');
-  return candidate.trim();
+  log('warn','Todos modelos Gemini com quota. Usando MyMemory gratuito...');
+  return await translateMyMemory(text, from, to);
 }
 
 async function translateMyMemory(text, from, to){
