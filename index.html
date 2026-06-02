@@ -421,7 +421,7 @@ async function doTranslate(){
 }
 
 // Models tried in order when quota is exceeded
-const GEMINI_MODELS = ['gemini-1.5-flash','gemini-1.5-flash-8b','gemini-2.0-flash-lite'];
+const GEMINI_MODELS = ['gemini-2.0-flash-lite','gemini-2.0-flash','gemini-1.0-pro','gemini-pro'];
 
 async function translateGemini(text, from, to){
   const prompt =
@@ -440,10 +440,12 @@ async function translateGemini(text, from, to){
         })
       });
       const data = await res.json();
-      if(!res.ok || res.status===429){
+      if(!res.ok){
         const msg = data?.error?.message || 'HTTP '+res.status;
-        if(msg.toLowerCase().includes('quota') || res.status===429){
-          log('warn', model+': quota esgotada, tentando próximo...');
+        const isQuota = res.status===429 || msg.toLowerCase().includes('quota');
+        const isNotFound = res.status===404 || msg.toLowerCase().includes('not found') || msg.toLowerCase().includes('not supported');
+        if(isQuota || isNotFound){
+          log('warn', model+': indisponível, tentando próximo...');
           continue;
         }
         throw new Error(msg);
@@ -453,7 +455,8 @@ async function translateGemini(text, from, to){
       log('ok','Modelo: '+model);
       return candidate.trim();
     } catch(e){
-      if(e.message&&(e.message.includes('quota')||e.message.includes('429'))){ continue; }
+      const em = e.message||'';
+      if(em.includes('quota')||em.includes('429')||em.includes('not found')||em.includes('not supported')){ continue; }
       throw e;
     }
   }
@@ -521,3 +524,4 @@ function log(type, msg){
 </script>
 </body>
 </html>
+
